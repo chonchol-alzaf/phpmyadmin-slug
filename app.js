@@ -124,8 +124,7 @@ if (cluster.isMaster) {
     res.send(`Session data: ${req.session.customData || 'No data set'}`);
   });
 
-  console.log(`http://${req.targetIp}`);
-  
+
   // Create the server
   const server = http.createServer((req, res) => {
     limiter.schedule(() => {
