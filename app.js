@@ -131,6 +131,7 @@ if (cluster.isMaster) {
       app(req, res, () => {
         // If the request is not handled by Express routes, proxy it to the dynamic target IP
         if (req.targetIp) {
+          console.log(`http://${req.targetIp}`);
           proxy.web(req, res, { target: `http://${req.targetIp}` }, (error) => {
             if (error) {
               console.error('Proxy error:', error.message); // Log proxy error
