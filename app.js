@@ -99,8 +99,8 @@ if (cluster.isMaster) {
       });
       console.log('API response:', response.data); // Log API response
 
-      if (response.data.success && response.data.data && response.data.data.ip) {
-        req.targetIp = response.data.data.ip;
+      if (response.data.success && response.data.resource && response.data.resource.ip) {
+        req.targetIp = response.data.resource.ip;
         ipCache.set(subdomain, req.targetIp); // Cache the IP
         next();
       } else {
