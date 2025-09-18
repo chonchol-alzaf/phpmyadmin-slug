@@ -14,6 +14,8 @@ const compression = require('compression');
 // Load environment variables from .env file
 dotenv.config();
 
+console.log("hello form node js");
+
 // Get base URL and API key from environment variables
 const API_BASE_URL = process.env.API_BASE_URL;
 const API_KEY = process.env.API_KEY;
