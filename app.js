@@ -1,18 +1,20 @@
-const http = require("http");
-const https = require("https");
-const httpProxy = require("http-proxy");
-const session = require("express-session");
-const cookieParser = require("cookie-parser");
-const express = require("express");
-const axios = require("axios");
-const dotenv = require("dotenv");
-const cluster = require("cluster");
-const os = require("os");
-const Bottleneck = require("bottleneck");
-const compression = require("compression");
+const http = require('http');
+const https = require('https');
+const httpProxy = require('http-proxy');
+const session = require('express-session');
+const cookieParser = require('cookie-parser');
+const express = require('express');
+const axios = require('axios');
+const dotenv = require('dotenv');
+const cluster = require('cluster');
+const os = require('os');
+const Bottleneck = require('bottleneck');
+const compression = require('compression');
 
 // Load environment variables from .env file
 dotenv.config();
+
+console.log("hello form node js");
 
 // Get base URL and API key from environment variables
 const API_BASE_URL = process.env.API_BASE_URL;
@@ -29,7 +31,7 @@ if (cluster.isMaster) {
     cluster.fork(); // Fork workers for each CPU core
   }
 
-  cluster.on("exit", (worker, code, signal) => {
+  cluster.on('exit', (worker, code, signal) => {
     console.log(`Worker ${worker.process.pid} died. Restarting...`);
     cluster.fork(); // Restart a worker if one dies
   });
@@ -50,25 +52,23 @@ if (cluster.isMaster) {
   app.use(cookieParser());
 
   // Session configuration
-  app.use(
-    session({
-      secret: "9c609581-9090-4250-9703-c3932cc31f0f", // Secure secret key
-      resave: false,
-      saveUninitialized: true,
-      cookie: { secure: false }, // Set to true if using HTTPS
-    })
-  );
+  app.use(session({
+    secret: '9c609581-9090-4250-9703-c3932cc31f0f', // Secure secret key
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false } // Set to true if using HTTPS
+  }));
 
   // Rate limiter to limit the number of concurrent requests
   const limiter = new Bottleneck({
-    maxConcurrent: 150, // Limit concurrent requests
-    minTime: 100, // Minimum time between requests (ms)
+    maxConcurrent: 150,  // Limit concurrent requests
+    minTime: 100         // Minimum time between requests (ms)
   });
 
   // Middleware to redirect the base URL to /phpmyadmin
   app.use((req, res, next) => {
-    if (req.path === "/") {
-      return res.redirect("/phpmyadmin");
+    if (req.path === '/') {
+      return res.redirect('/phpmyadmin');
     }
     next();
   });
@@ -79,8 +79,8 @@ if (cluster.isMaster) {
 
   // Middleware to log session details and fetch target IP
   app.use(async (req, res, next) => {
-    const hostname = req.headers.host.split(":")[0]; // Get hostname without port
-    const subdomain = hostname.split(".")[0];
+    const hostname = req.headers.host.split(':')[0]; // Get hostname without port
+    const subdomain = hostname.split('.')[0];
 
     // Check if IP is cached
     if (ipCache.has(subdomain)) {
@@ -90,48 +90,42 @@ if (cluster.isMaster) {
 
     try {
       // Fetch the IP address from the API
-      const response = await axios.get(
-        `${API_BASE_URL}/get-server-ip/${subdomain}`,
-        {
-          headers: {
-            Authorization: `Bearer ${API_KEY}`,
-            httpAgent,
-            httpsAgent,
-          },
+      const response = await axios.get(`${API_BASE_URL}/get-server-ip/${subdomain}`, {
+        headers: {
+          'Authorization': `Bearer ${API_KEY}`,
+          httpAgent,
+          httpsAgent
         }
-      );
-      console.log("API response:", response.data); // Log API response
+      });
+      console.log('API response:', response.data); // Log API response
 
-      if (
-        response.data.success &&
-        response.data.data &&
-        response.data.data.ip
-      ) {
-        req.targetIp = response.data.data.ip;
+      if (response.data.success && response.data.resource && response.data.resource.ip) {
+        req.targetIp = response.data.resource.ip;
         ipCache.set(subdomain, req.targetIp); // Cache the IP
         next();
       } else {
-        console.error("Invalid API response:", response.data); // Log invalid response
-        res.writeHead(500, { "Content-Type": "text/plain" });
-        res.end("Failed to get target IP.");
+        console.error('Invalid API response:', response.data); // Log invalid response
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Failed to get target IP.');
       }
     } catch (error) {
-      console.error("API request failed:", error.message); // Log API request error
-      res.writeHead(500, { "Content-Type": "text/plain" });
-      res.end("Invalid Entry. Please try again.");
+      console.error('API request failed:', error.message); // Log API request error
+      res.writeHead(500, { 'Content-Type': 'text/plain' });
+      res.end('Invalid Entry. Please try again.');
     }
   });
 
   // Route to set session data
-  app.get("/set-session/:data", (req, res) => {
+  app.get('/set-session/:data', (req, res) => {
     req.session.customData = req.params.data;
     res.send(`Session data set to: ${req.params.data}`);
   });
 
   // Route to get session data
-  app.get("/get-session", (req, res) => {
-    res.send(`Session data: ${req.session.customData || "No data set"}`);
+  app.get('/get-session', (req, res) => {
+    res.send(`Session data: ${req.session.customData || 'No data set'}`);
   });
+
 
   // Create the server
   const server = http.createServer((req, res) => {
@@ -139,30 +133,28 @@ if (cluster.isMaster) {
       app(req, res, () => {
         // If the request is not handled by Express routes, proxy it to the dynamic target IP
         if (req.targetIp) {
-          const targetUrl = `http://${req.targetIp}${req.url}`;
-          console.log(`Proxying request → ${targetUrl}`);
           proxy.web(req, res, { target: `http://${req.targetIp}` }, (error) => {
             if (error) {
-              console.error("Proxy error:", error.message); // Log proxy error
-              res.writeHead(500, { "Content-Type": "text/plain" });
-              res.end("Proxy error.");
+              console.error('Proxy error:', error.message); // Log proxy error
+              res.writeHead(500, { 'Content-Type': 'text/plain' });
+              res.end('Proxy error.');
             }
           });
         } else {
-          res.writeHead(500, { "Content-Type": "text/plain" });
-          res.end("No target IP available.");
+          res.writeHead(500, { 'Content-Type': 'text/plain' });
+          res.end('No target IP available.');
         }
       });
     });
   });
 
   // Handle proxy errors
-  proxy.on("error", (err, req, res) => {
-    console.error("Proxy error:", err.message); // Log proxy error
+  proxy.on('error', (err, req, res) => {
+    console.error('Proxy error:', err.message); // Log proxy error
     res.writeHead(500, {
-      "Content-Type": "text/plain",
+      'Content-Type': 'text/plain'
     });
-    res.end("Proxy error.");
+    res.end('Proxy error.');
   });
 
   // Start the server
